@@ -5,3 +5,5 @@ optimum
 psutil
 pydot
 graphviz
+pandas
+scikit-learn
