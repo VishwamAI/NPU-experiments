@@ -21,7 +21,7 @@ def generate_input_data(model):
         shape = input_info.shape
         # Replace dynamic dimensions (None or -1) with a default size of 1
         shape = [dim if isinstance(dim, int) else 1 for dim in shape]
-        dtype = np.float32 if input_info.type == 'tensor(float)' else np.int32
+        dtype = np.float32 if input_info.type == 'tensor(float)' else np.int64 if input_info.type == 'tensor(int64)' else np.int32
         input_data[input_name] = np.random.rand(*shape).astype(dtype)
     return input_data
 
