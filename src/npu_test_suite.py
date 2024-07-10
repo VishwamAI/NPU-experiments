@@ -215,9 +215,15 @@ def run_performance_test(session: ort.InferenceSession, io_binding: ort.IOBindin
         session.run_with_iobinding(io_binding)
         iter_end_time = time.time()
         latencies.append(iter_end_time - iter_start_time)
+
+        # Detailed memory usage statistics
         current_memory_usage = psutil.Process().memory_info().rss / (1024 * 1024)
         if verbose:
             print(f"Iteration {i+1}/{iterations}, Current memory usage: {current_memory_usage:.2f} MB")
+            for output_name, output_info in zip(session.get_outputs(), io_binding.get_outputs()):
+                output_data = output_info.numpy()
+                print(f"Output: {output_name.name}, dtype: {output_data.dtype}, shape: {output_data.shape}, sample values: {output_data.flatten()[:5]}")
+
         if current_memory_usage > memory_threshold:
             if verbose:
                 print(f"Memory usage exceeded {memory_threshold} MB. Reducing the number of iterations.")
