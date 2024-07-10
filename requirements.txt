@@ -1,1 +1,7 @@
-onnx\nonnxruntime\nnumpy\npsutil\npydot\ngraphviz
+onnx
+onnxruntime
+numpy
+optimum
+psutil
+pydot
+graphviz
