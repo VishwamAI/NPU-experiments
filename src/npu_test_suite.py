@@ -117,8 +117,10 @@ def generate_input_data(model, model_name='gpt2', use_dataset=False, dataset_nam
         elif model_name in MODEL_SEQUENCE_LENGTHS:
             if 'gpt' in model_name or 'bert' in model_name or 'roberta' in model_name or 't5' in model_name:
                 try:
+                    # Load the tokenizer for the specified transformer model
                     tokenizer = AutoTokenizer.from_pretrained(model_name)
                     tokenizer.pad_token = tokenizer.eos_token
+                    # Generate a sample input text and tokenize it
                     text = ["This is a sample input text for the model."] * MODEL_SEQUENCE_LENGTHS[model_name]
                     inputs = tokenizer(text, return_tensors='np', padding='max_length', max_length=MODEL_SEQUENCE_LENGTHS[model_name], truncation=True)
                     for input_name, input_values in inputs.items():
