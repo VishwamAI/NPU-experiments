@@ -44,6 +44,14 @@ def measure_performance(model_path, iterations=10):
             print(f"Binding input: {name}, dtype: {data.dtype}, shape: {data.shape}, buffer_ptr: {data.ctypes.data}")
             io_binding.bind_input(name, 'cpu', 0, data.dtype, data.shape, data.ctypes.data)
 
+        # Bind outputs
+        for output_info in session.get_outputs():
+            output_name = output_info.name
+            output_shape = output_info.shape
+            output_dtype = np.float32 if output_info.type == 'tensor(float)' else np.int32
+            output_buffer = np.empty(output_shape, dtype=output_dtype)
+            io_binding.bind_output(output_name, 'cpu', 0, output_buffer.dtype, output_buffer.shape, output_buffer.ctypes.data)
+
         start_time = time.time()
         for _ in range(iterations):
             session.run_with_iobinding(io_binding)
