@@ -7,6 +7,31 @@ import argparse
 import pandas as pd
 from sklearn.datasets import load_iris
 
+def generate_random_input_data(model, sequence_length=768):
+    """
+    Generate random input data for the given ONNX model.
+
+    Args:
+        model (onnxruntime.InferenceSession): The ONNX model session.
+        sequence_length (int): The sequence length to use for inputs with dynamic dimensions.
+
+    Returns:
+        dict: A dictionary containing the generated random input data.
+    """
+    input_data = {}
+    for input_info in model.get_inputs():
+        input_name = input_info.name
+        shape = input_info.shape
+        # Replace dynamic dimensions (None or -1) with a default size of 1
+        shape = [dim if isinstance(dim, int) else 1 for dim in shape]
+        # Set a specific sequence length for inputs with dynamic dimensions
+        if len(shape) > 1 and shape[1] == 1:
+            shape[1] = sequence_length  # Use the provided sequence length
+        dtype = np.float32 if input_info.type == 'tensor(float)' else np.int64 if input_info.type == 'tensor(int64)' else np.int32
+        input_data[input_name] = np.random.rand(*shape).astype(dtype)
+    return input_data
+
+# Update the generate_input_data function to call generate_random_input_data
 def generate_input_data(model, sequence_length=768, use_dataset=False, dataset_name=None):
     """
     Generate input data for the given ONNX model.
@@ -32,19 +57,17 @@ def generate_input_data(model, sequence_length=768, use_dataset=False, dataset_n
                 shape = [dim if isinstance(dim, int) else X.shape[i] for i, dim in enumerate(shape)]
                 dtype = np.float32 if input_info.type == 'tensor(float)' else np.int64 if input_info.type == 'tensor(int64)' else np.int32
                 input_data[input_name] = X.astype(dtype)
+        elif dataset_name == 'gpt2':
+            from transformers import GPT2Tokenizer
+            tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+            text = ["This is a sample input text for GPT-2 model."] * sequence_length
+            inputs = tokenizer(text, return_tensors='np', padding='max_length', max_length=sequence_length, truncation=True)
+            for input_name, input_values in inputs.items():
+                input_data[input_name] = input_values
         else:
-            raise ValueError(f"Unsupported dataset: {dataset_name}")
+            input_data = generate_random_input_data(model, sequence_length)
     else:
-        for input_info in model.get_inputs():
-            input_name = input_info.name
-            shape = input_info.shape
-            # Replace dynamic dimensions (None or -1) with a default size of 1
-            shape = [dim if isinstance(dim, int) else 1 for dim in shape]
-            # Set a specific sequence length for inputs with dynamic dimensions
-            if len(shape) > 1 and shape[1] == 1:
-                shape[1] = sequence_length  # Use the provided sequence length
-            dtype = np.float32 if input_info.type == 'tensor(float)' else np.int64 if input_info.type == 'tensor(int64)' else np.int32
-            input_data[input_name] = np.random.rand(*shape).astype(dtype)
+        input_data = generate_random_input_data(model, sequence_length)
     return input_data
 
 def measure_performance(model_path, iterations=10, sequence_length=768, use_dataset=False, dataset_name=None):
