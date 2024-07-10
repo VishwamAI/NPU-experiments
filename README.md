@@ -1,41 +1,44 @@
 # NPU-experiments
 
 ## Overview
-This repository contains experiments and development for advanced Neural Processing Units (NPUs) designed to assist in various advanced fields such as quantum physics, robotics, and software engineering. The goal is to create NPUs that are more advanced than Microsoft's NPUs, with a focus on building a comprehensive model from the ground up.
+This repository contains experiments and performance measurements for Neural Processing Units (NPUs). The goal is to develop advanced NPUs that can assist in various fields such as quantum physics, robotics, and software engineering.
 
-## Project Structure
-- `npu_test_suite.py`: A script for testing and measuring the performance of the NPU models.
-- `.gitattributes`: Configuration file for Git LFS to track large files such as `.onnx` models.
-- `README.md`: This file, providing an overview of the project.
-- `requirements.txt`: A file listing all the Python dependencies required for the project (to be created).
-- `LICENSE`: Licensing information for the project (to be created).
+## Repository Structure
+- `src/`: Contains source code files.
+  - `npu_test_suite.py`: Script for testing and measuring the performance of ONNX models on NPUs.
+  - `inspect_tensor_shapes.py`: Script for inspecting the tensor shapes of ONNX models.
+  - `convert_to_onnx.py`: Script for converting models to ONNX format.
+- `docs/`: Contains documentation files.
+- `tests/`: Contains test scripts and data.
+- `examples/`: Contains example usage scripts and models.
+- `requirements.txt`: List of dependencies required for running the scripts.
 
-## Getting Started
-To get started with the NPU experiments, follow these steps:
+## Setup
+To set up the environment and install the necessary dependencies, run the following command:
+```bash
+pip install -r requirements.txt
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/VishwamAI/NPU-experiments.git
-   cd NPU-experiments
-   ```
+## Running the NPU Test Suite
+To measure the performance of an ONNX model using the `npu_test_suite.py` script, use the following command:
+```bash
+python src/npu_test_suite.py <model_path> --iterations <number_of_iterations>
+```
+- `<model_path>`: Path to the ONNX model file.
+- `<number_of_iterations>`: (Optional) Number of iterations to run for performance measurement. Default is 10.
 
-2. **Install dependencies:**
-   Ensure you have Python 3.10.12 installed. Then, install the required Python packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Inspecting Tensor Shapes
+To inspect the tensor shapes of an ONNX model using the `inspect_tensor_shapes.py` script, use the following command:
+```bash
+python src/inspect_tensor_shapes.py <model_path>
+```
+- `<model_path>`: Path to the ONNX model file.
 
-3. **Run the NPU test suite:**
-   The `npu_test_suite.py` script can be used to test and measure the performance of the NPU models. Use the following command to run the test suite:
-   ```bash
-   python npu_test_suite.py --model_path path/to/gpt2.onnx --iterations 10
-   ```
-
-## Contributing
-Contributions are welcome! Please fork the repository and create a pull request with your changes. Ensure that your code follows the project's coding standards and includes appropriate tests.
+## Converting Models to ONNX
+To convert a model to ONNX format using the `convert_to_onnx.py` script, follow the instructions provided in the script.
 
 ## License
-This project is licensed under the MIT License. See the `LICENSE` file for more details (to be created).
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-Special thanks to the contributors and the community for their support and contributions to this project.
+## Contact
+For any questions or inquiries, please contact the project maintainers.
