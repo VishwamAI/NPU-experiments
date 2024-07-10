@@ -26,7 +26,9 @@ def convert_gpt2_to_onnx(output_path):
 
     # Modify the model to not use past_key_values during export
     def forward_no_past_key_values(self, input_ids, attention_mask=None, *args, **kwargs):
-        return self.forward(input_ids=input_ids, attention_mask=attention_mask, past_key_values=None, *args, **kwargs)
+        if 'past_key_values' in kwargs:
+            kwargs['past_key_values'] = None
+        return self.forward(input_ids=input_ids, attention_mask=attention_mask, *args, **kwargs)
 
     model.forward = forward_no_past_key_values.__get__(model, GPT2Model)
 
