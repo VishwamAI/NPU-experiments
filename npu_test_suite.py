@@ -48,6 +48,8 @@ def measure_performance(model_path, iterations=10):
         for output_info in session.get_outputs():
             output_name = output_info.name
             output_shape = output_info.shape
+            # Replace dynamic dimensions (None or -1) with a default size of 1
+            output_shape = [dim if isinstance(dim, int) else 1 for dim in output_shape]
             output_dtype = np.float32 if output_info.type == 'tensor(float)' else np.int32
             output_buffer = np.empty(output_shape, dtype=output_dtype)
             io_binding.bind_output(output_name, 'cpu', 0, output_buffer.dtype, output_buffer.shape, output_buffer.ctypes.data)
