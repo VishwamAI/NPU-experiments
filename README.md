@@ -13,6 +13,7 @@ This repository contains experiments and performance measurements for Neural Pro
 - `examples/`: Contains example usage scripts and models.
 - `requirements.txt`: List of dependencies required for running the scripts.
 - `data/`: Contains dataset files for input data generation.
+- `design_document_outline.md`: Contains the design document outline for the NPU project.
 
 ## Setup
 To set up the environment and install the necessary dependencies, run the following command:
@@ -34,18 +35,24 @@ The `requirements.txt` file includes the following dependencies:
 ## Running the NPU Test Suite
 To measure the performance of an ONNX model using the `npu_test_suite.py` script, use the following command:
 ```bash
-python src/npu_test_suite.py <model_path> --iterations <number_of_iterations> [--use_dataset] [--dataset_name <dataset_name>]
+python src/npu_test_suite.py <model_path> --iterations <number_of_iterations> [--use_dataset] [--dataset_name <dataset_name>] [--verbose]
 ```
 - `<model_path>`: Path to the ONNX model file.
 - `<number_of_iterations>`: (Optional) Number of iterations to run for performance measurement. Default is 10.
 - `--use_dataset`: (Optional) Flag to indicate whether to use a dataset for input data generation.
 - `--dataset_name`: (Optional) Name of the dataset to use if `--use_dataset` is specified. Currently supported: 'iris'.
+- `--verbose`: (Optional) Flag to enable verbose mode for detailed output during performance measurement.
 
 ### Example
 To run the NPU Test Suite using the Iris dataset for input data generation, use the following command:
 ```bash
-python src/npu_test_suite.py <model_path> --iterations 10 --use_dataset --dataset_name iris
+python src/npu_test_suite.py <model_path> --iterations 10 --use_dataset --dataset_name iris --verbose
 ```
+
+### New Features
+The `npu_test_suite.py` script now includes the following new features:
+- **Latency and Throughput Metrics**: The script measures and reports the latency and throughput of the ONNX model during performance testing.
+- **Verbose Mode**: When the `--verbose` flag is used, the script provides detailed output during performance measurement, including intermediate results and additional diagnostic information.
 
 ## Dataset Functionality
 The `npu_test_suite.py` script now supports using real datasets for input data generation. This feature allows for more realistic performance testing of ONNX models on NPUs.
@@ -82,4 +89,4 @@ To use a pre-trained transformer model with the NPU Test Suite, follow these ste
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Contact
-For any questions or inquiries, please contact the project maintainers.
+For any questions or inquiries, please contact the project maintainers at [maintainer@example.com].
