@@ -60,6 +60,7 @@ def generate_input_data(model, sequence_length=768, use_dataset=False, dataset_n
         elif dataset_name == 'gpt2':
             from transformers import GPT2Tokenizer
             tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+            tokenizer.pad_token = tokenizer.eos_token
             text = ["This is a sample input text for GPT-2 model."] * sequence_length
             inputs = tokenizer(text, return_tensors='np', padding='max_length', max_length=sequence_length, truncation=True)
             for input_name, input_values in inputs.items():
