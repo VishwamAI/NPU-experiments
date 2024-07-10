@@ -4,9 +4,13 @@
 This repository contains experiments and performance measurements for Neural Processing Units (NPUs). The goal is to develop advanced NPUs that can assist in various fields such as quantum physics, robotics, and software engineering.
 
 ## Repository Structure
-- `npu_test_suite.py`: Script for testing and measuring the performance of ONNX models on NPUs.
-- `inspect_tensor_shapes.py`: Script for inspecting the tensor shapes of ONNX models.
-- `convert_to_onnx.py`: Script for converting models to ONNX format.
+- `src/`: Contains source code files.
+  - `npu_test_suite.py`: Script for testing and measuring the performance of ONNX models on NPUs.
+  - `inspect_tensor_shapes.py`: Script for inspecting the tensor shapes of ONNX models.
+  - `convert_to_onnx.py`: Script for converting models to ONNX format.
+- `docs/`: Contains documentation files.
+- `tests/`: Contains test scripts and data.
+- `examples/`: Contains example usage scripts and models.
 - `requirements.txt`: List of dependencies required for running the scripts.
 
 ## Setup
@@ -18,7 +22,7 @@ pip install -r requirements.txt
 ## Running the NPU Test Suite
 To measure the performance of an ONNX model using the `npu_test_suite.py` script, use the following command:
 ```bash
-python npu_test_suite.py <model_path> --iterations <number_of_iterations>
+python src/npu_test_suite.py <model_path> --iterations <number_of_iterations>
 ```
 - `<model_path>`: Path to the ONNX model file.
 - `<number_of_iterations>`: (Optional) Number of iterations to run for performance measurement. Default is 10.
@@ -26,7 +30,7 @@ python npu_test_suite.py <model_path> --iterations <number_of_iterations>
 ## Inspecting Tensor Shapes
 To inspect the tensor shapes of an ONNX model using the `inspect_tensor_shapes.py` script, use the following command:
 ```bash
-python inspect_tensor_shapes.py <model_path>
+python src/inspect_tensor_shapes.py <model_path>
 ```
 - `<model_path>`: Path to the ONNX model file.
 
