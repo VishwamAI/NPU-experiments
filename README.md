@@ -29,6 +29,7 @@ The `requirements.txt` file includes the following dependencies:
 - graphviz
 - pandas
 - scikit-learn
+- transformers
 
 ## Running the NPU Test Suite
 To measure the performance of an ONNX model using the `npu_test_suite.py` script, use the following command:
@@ -67,6 +68,15 @@ python src/inspect_tensor_shapes.py <model_path>
 
 ## Converting Models to ONNX
 To convert a model to ONNX format using the `convert_to_onnx.py` script, follow the instructions provided in the script.
+
+## Using Transformers Library
+The `transformers` library provides a wide range of pre-trained models for natural language processing tasks. This library can be used to enhance the capabilities of the NPU Test Suite by enabling the use of transformer-based models.
+
+### Example
+To use a pre-trained transformer model with the NPU Test Suite, follow these steps:
+1. Install the `transformers` library by running `pip install transformers`.
+2. Load the pre-trained model using the `transformers` library and convert it to ONNX format using the `convert_to_onnx.py` script.
+3. Use the converted ONNX model with the `npu_test_suite.py` script to measure its performance.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
