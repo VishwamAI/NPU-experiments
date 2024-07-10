@@ -1,0 +1,6 @@
+onnxruntime
+onnx
+optimum
+psutil
+pydot
+graphviz
