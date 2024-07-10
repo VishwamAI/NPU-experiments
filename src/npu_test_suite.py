@@ -82,7 +82,7 @@ def generate_input_data(model, model_name='gpt2', use_dataset=False, dataset_nam
         input_data = generate_random_input_data(model, model_name)
     return input_data
 
-def measure_performance(model_path: str, iterations: int = 5, model_name: str = 'gpt2', use_dataset: bool = False, dataset_name: str = None, memory_threshold: int = 4000, verbose: bool = True) -> tuple[float, float, int]:
+def measure_performance(model_path: str, iterations: int = 5, model_name: str = 'gpt2', use_dataset: bool = False, dataset_name: str = None, memory_threshold: int = 4000, verbose: bool = True) -> tuple[float, float, int, float, float]:
     """
     Measure the performance of the given ONNX model.
 
@@ -96,14 +96,15 @@ def measure_performance(model_path: str, iterations: int = 5, model_name: str = 
         verbose (bool): Whether to print detailed output during iterations.
 
     Returns:
-        tuple: A tuple containing the average inference time, memory usage, and the actual number of iterations performed.
+        tuple: A tuple containing the average inference time, memory usage, actual number of iterations performed, average latency, and throughput.
     """
     try:
         session = ort.InferenceSession(model_path)
         input_data = generate_input_data(session, model_name, use_dataset, dataset_name)
         io_binding = session.io_binding()
         for name, data in input_data.items():
-            print(f"Binding input: {name}, dtype: {data.dtype}, shape: {data.shape}, buffer_ptr: {data.ctypes.data}")
+            if verbose:
+                print(f"Binding input: {name}, dtype: {data.dtype}, shape: {data.shape}, buffer_ptr: {data.ctypes.data}")
             io_binding.bind_input(name, 'cpu', 0, data.dtype, data.shape, data.ctypes.data)
 
         # Bind outputs
@@ -116,19 +117,26 @@ def measure_performance(model_path: str, iterations: int = 5, model_name: str = 
             try:
                 output_shape[1] = MODEL_SEQUENCE_LENGTHS[model_name]  # Use the provided sequence length
             except KeyError:
-                print(f"Model name '{model_name}' not found in MODEL_SEQUENCE_LENGTHS. Using default sequence length of {DEFAULT_SEQUENCE_LENGTH}.")
+                if verbose:
+                    print(f"Model name '{model_name}' not found in MODEL_SEQUENCE_LENGTHS. Using default sequence length of {DEFAULT_SEQUENCE_LENGTH}.")
                 output_shape[1] = DEFAULT_SEQUENCE_LENGTH  # Default sequence length
             output_dtype = np.float32 if output_info.type == 'tensor(float)' else np.int32
             output_buffer = np.empty(output_shape, dtype=output_dtype)
             io_binding.bind_output(output_name, 'cpu', 0, output_buffer.dtype, output_buffer.shape, output_buffer.ctypes.data)
 
         start_time = time.time()
+        latencies = []
         for i in range(iterations):
+            iter_start_time = time.time()
             session.run_with_iobinding(io_binding)
+            iter_end_time = time.time()
+            latencies.append(iter_end_time - iter_start_time)
             current_memory_usage = psutil.Process().memory_info().rss / (1024 * 1024)
-            print(f"Iteration {i+1}/{iterations}, Current memory usage: {current_memory_usage:.2f} MB")
+            if verbose:
+                print(f"Iteration {i+1}/{iterations}, Current memory usage: {current_memory_usage:.2f} MB")
             if current_memory_usage > memory_threshold:  # Use the memory_threshold parameter
-                print(f"Memory usage exceeded {memory_threshold} MB. Reducing the number of iterations.")
+                if verbose:
+                    print(f"Memory usage exceeded {memory_threshold} MB. Reducing the number of iterations.")
                 iterations = i + 1
                 break
         end_time = time.time()
@@ -136,12 +144,14 @@ def measure_performance(model_path: str, iterations: int = 5, model_name: str = 
         duration = end_time - start_time
         avg_time = duration / iterations  # Use the actual number of iterations performed
         memory_usage = psutil.Process().memory_info().rss / (1024 * 1024)
+        avg_latency = sum(latencies) / len(latencies)
+        throughput = iterations / duration
 
-        return avg_time, memory_usage, iterations  # Return the actual number of iterations performed
+        return avg_time, memory_usage, iterations, avg_latency, throughput  # Return the actual number of iterations performed
     except Exception as e:
         print("Error during performance measurement:")
         print(traceback.format_exc())
-        return None, None, None
+        return None, None, None, None, None
 
 def main():
     """
@@ -154,13 +164,16 @@ def main():
     parser.add_argument("--use_dataset", action="store_true", help="Whether to use a dataset for input data generation.")
     parser.add_argument("--dataset_name", type=str, help="The name of the dataset to use if use_dataset is True.")
     parser.add_argument("--memory_threshold", type=int, default=4000, help="The memory usage threshold in MB. If exceeded, the number of iterations will be reduced.")
+    parser.add_argument("--verbose", action="store_true", help="Whether to print detailed output during iterations.")
     args = parser.parse_args()
 
-    avg_time, memory_usage, actual_iterations = measure_performance(args.model_path, args.iterations, args.model_name, args.use_dataset, args.dataset_name, args.memory_threshold)
+    avg_time, memory_usage, actual_iterations, avg_latency, throughput = measure_performance(args.model_path, args.iterations, args.model_name, args.use_dataset, args.dataset_name, args.memory_threshold, args.verbose)
     if avg_time is not None:
         print(f"Average inference time: {avg_time:.4f} seconds")
         print(f"Memory usage: {memory_usage:.2f} MB")
         print(f"Actual iterations performed: {actual_iterations}")
+        print(f"Average latency: {avg_latency:.4f} seconds")
+        print(f"Throughput: {throughput:.2f} iterations/second")
     else:
         print("Performance measurement failed.")
 
