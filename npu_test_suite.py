@@ -16,7 +16,8 @@ def generate_input_data(model):
         dict: A dictionary containing the generated input data.
     """
     input_data = {}
-    for input_name, input_info in model.get_inputs().items():
+    for input_info in model.get_inputs():
+        input_name = input_info.name
         shape = input_info.shape
         dtype = np.float32 if input_info.type == 'tensor(float)' else np.int32
         input_data[input_name] = np.random.rand(*shape).astype(dtype)
