@@ -6,11 +6,59 @@ import traceback
 import argparse
 import pandas as pd
 from sklearn.datasets import load_iris
+from transformers import AutoTokenizer  # Add this import for handling tokenization
 
 # Dictionary to handle model-specific sequence lengths
 MODEL_SEQUENCE_LENGTHS = {
     'gpt2': 128,
-    # Add other models and their sequence lengths here
+    'bert': 512,
+    'roberta': 512,
+    't5': 512,
+    'distilbert': 512,
+    'albert': 512,
+    'xlm': 512,
+    'xlnet': 512,
+    'bart': 512,
+    'electra': 512,
+    'longformer': 4096,
+    'reformer': 4096,
+    'bigbird': 4096,
+    'gpt3': 2048,
+    'megatron': 2048,
+    'turing-nlg': 2048,
+    'switch-transformer': 2048,
+    'vit': 224,
+    'deit': 224,
+    'swin': 224,
+    'resnet': 224,
+    'efficientnet': 224,
+    'mobilenet': 224,
+    'densenet': 224,
+    'inception': 299,
+    'nasnet': 331,
+    'xception': 299,
+    'yolo': 416,
+    'ssd': 300,
+    'faster-rcnn': 800,
+    'mask-rcnn': 800,
+    'retinanet': 800,
+    'unet': 512,
+    'deeplabv3': 512,
+    'segformer': 512,
+    'dpt': 512,
+    'gluoncv': 512,
+    'pytorchcv': 512,
+    'open-mmlab': 512,
+    'detectron2': 800,
+    'mmdetection': 800,
+    'openpose': 368,
+    'alphapose': 368,
+    'hrnet': 256,
+    'simplepose': 256,
+    'pose-resnet': 256,
+    'pose-hg': 256,
+    'pose-hrnet': 256,
+    'pose-dla': 256,  # General category for all pose-dla models
 }
 
 # Global constant for the default sequence length
@@ -50,7 +98,6 @@ def generate_input_data(model, model_name='gpt2', use_dataset=False, dataset_nam
         model_name (str): The name of the model to use for determining the sequence length.
         use_dataset (bool): Whether to use a dataset for input data generation.
         dataset_name (str): The name of the dataset to use if use_dataset is True.
-                            For the GPT-2 model, a fixed sequence length of 128 is used.
 
     Returns:
         dict: A dictionary containing the generated input data.
@@ -67,15 +114,28 @@ def generate_input_data(model, model_name='gpt2', use_dataset=False, dataset_nam
                 shape = [dim if isinstance(dim, int) else X.shape[i] for i, dim in enumerate(shape)]
                 dtype = np.float32 if input_info.type == 'tensor(float)' else np.int64 if input_info.type == 'tensor(int64)' else np.int32
                 input_data[input_name] = X.astype(dtype)
-        elif dataset_name in MODEL_SEQUENCE_LENGTHS:
-            from transformers import GPT2Tokenizer
-            tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-            tokenizer.pad_token = tokenizer.eos_token
-            # Use a fixed sequence length for the GPT-2 model to avoid memory issues
-            text = ["This is a sample input text for GPT-2 model."] * MODEL_SEQUENCE_LENGTHS[dataset_name]
-            inputs = tokenizer(text, return_tensors='np', padding='max_length', max_length=MODEL_SEQUENCE_LENGTHS[dataset_name], truncation=True)
-            for input_name, input_values in inputs.items():
-                input_data[input_name] = input_values
+        elif model_name in MODEL_SEQUENCE_LENGTHS:
+            if 'gpt' in model_name or 'bert' in model_name or 'roberta' in model_name or 't5' in model_name:
+                try:
+                    tokenizer = AutoTokenizer.from_pretrained(model_name)
+                    tokenizer.pad_token = tokenizer.eos_token
+                    text = ["This is a sample input text for the model."] * MODEL_SEQUENCE_LENGTHS[model_name]
+                    inputs = tokenizer(text, return_tensors='np', padding='max_length', max_length=MODEL_SEQUENCE_LENGTHS[model_name], truncation=True)
+                    for input_name, input_values in inputs.items():
+                        input_data[input_name] = input_values
+                except Exception as e:
+                    print(f"Error loading tokenizer for model {model_name}: {e}")
+                    input_data = generate_random_input_data(model, model_name)
+            elif 'resnet' in model_name or 'efficientnet' in model_name or 'mobilenet' in model_name:
+                # Generate random image data for image models
+                for input_info in model.get_inputs():
+                    input_name = input_info.name
+                    shape = input_info.shape
+                    shape = [dim if isinstance(dim, int) else 224 for dim in shape]  # Default to 224x224 for image models
+                    dtype = np.float32 if input_info.type == 'tensor(float)' else np.int32
+                    input_data[input_name] = np.random.rand(*shape).astype(dtype)
+            else:
+                input_data = generate_random_input_data(model, model_name)
         else:
             input_data = generate_random_input_data(model, model_name)
     else:
@@ -114,12 +174,13 @@ def measure_performance(model_path: str, iterations: int = 5, model_name: str = 
             # Replace dynamic dimensions (None or -1) with a default size of 1
             output_shape = [dim if isinstance(dim, int) else 1 for dim in output_shape]
             # Set a specific sequence length for outputs with dynamic dimensions
-            try:
-                output_shape[1] = MODEL_SEQUENCE_LENGTHS[model_name]  # Use the provided sequence length
-            except KeyError:
-                if verbose:
-                    print(f"Model name '{model_name}' not found in MODEL_SEQUENCE_LENGTHS. Using default sequence length of {DEFAULT_SEQUENCE_LENGTH}.")
-                output_shape[1] = DEFAULT_SEQUENCE_LENGTH  # Default sequence length
+            if len(output_shape) > 1 and output_shape[1] == 1:
+                try:
+                    output_shape[1] = MODEL_SEQUENCE_LENGTHS[model_name]  # Use the provided sequence length
+                except KeyError:
+                    if verbose:
+                        print(f"Model name '{model_name}' not found in MODEL_SEQUENCE_LENGTHS. Using default sequence length of {DEFAULT_SEQUENCE_LENGTH}.")
+                    output_shape[1] = DEFAULT_SEQUENCE_LENGTH  # Default sequence length
             output_dtype = np.float32 if output_info.type == 'tensor(float)' else np.int32
             output_buffer = np.empty(output_shape, dtype=output_dtype)
             io_binding.bind_output(output_name, 'cpu', 0, output_buffer.dtype, output_buffer.shape, output_buffer.ctypes.data)
