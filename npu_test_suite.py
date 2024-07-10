@@ -41,6 +41,7 @@ def measure_performance(model_path, iterations=10):
         input_data = generate_input_data(session)
         io_binding = session.io_binding()
         for name, data in input_data.items():
+            print(f"Binding input: {name}, dtype: {data.dtype}, shape: {data.shape}, buffer_ptr: {data.ctypes.data}")
             io_binding.bind_input(name, 'cpu', data.dtype, data.shape, data.ctypes.data)
 
         start_time = time.time()
