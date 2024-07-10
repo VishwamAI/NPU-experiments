@@ -53,6 +53,8 @@ python src/npu_test_suite.py <model_path> --iterations 10 --use_dataset --datase
 The `npu_test_suite.py` script now includes the following new features:
 - **Latency and Throughput Metrics**: The script measures and reports the latency and throughput of the ONNX model during performance testing.
 - **Verbose Mode**: When the `--verbose` flag is used, the script provides detailed output during performance measurement, including intermediate results and additional diagnostic information.
+- **Input and Output Binding**: The script uses `bind_inputs` and `bind_outputs` functions to manage input and output bindings for the ONNX model, improving modularity and readability.
+- **Enhanced Performance Measurement**: The `measure_performance` function has been updated to use `run_performance_test` and `calculate_metrics` functions for more accurate and detailed performance metrics.
 
 ## Dataset Functionality
 The `npu_test_suite.py` script now supports using real datasets for input data generation. This feature allows for more realistic performance testing of ONNX models on NPUs.
