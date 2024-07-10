@@ -144,6 +144,108 @@ def generate_input_data(model, model_name='gpt2', use_dataset=False, dataset_nam
         input_data = generate_random_input_data(model, model_name)
     return input_data
 
+def bind_inputs(session: ort.InferenceSession, input_data: dict, verbose: bool) -> ort.IOBinding:
+    """
+    Bind the input data to the ONNX model session.
+
+    Args:
+        session (onnxruntime.InferenceSession): The ONNX model session.
+        input_data (dict): A dictionary containing the input data to bind.
+        verbose (bool): Whether to print detailed output during input binding.
+
+    Returns:
+        onnxruntime.IOBinding: The IOBinding object with the bound inputs.
+    """
+    io_binding = session.io_binding()
+    for name, data in input_data.items():
+        if verbose:
+            print(f"Binding input: {name}, dtype: {data.dtype}, shape: {data.shape}, buffer_ptr: {data.ctypes.data}")
+        io_binding.bind_input(name, 'cpu', 0, data.dtype, data.shape, data.ctypes.data)
+    return io_binding
+
+def bind_outputs(session: ort.InferenceSession, model_name: str, verbose: bool) -> ort.IOBinding:
+    """
+    Bind the output tensors to the ONNX model session.
+
+    Args:
+        session (onnxruntime.InferenceSession): The ONNX model session.
+        model_name (str): The name of the model to use for determining the sequence length.
+        verbose (bool): Whether to print detailed output during output binding.
+
+    Returns:
+        onnxruntime.IOBinding: The IOBinding object with the bound outputs.
+    """
+    io_binding = session.io_binding()
+    for output_info in session.get_outputs():
+        output_name = output_info.name
+        output_shape = output_info.shape
+        # Replace dynamic dimensions (None or -1) with a default size of 1
+        output_shape = [dim if isinstance(dim, int) else 1 for dim in output_shape]
+        # Set a specific sequence length for outputs with dynamic dimensions
+        if len(output_shape) > 1 and output_shape[1] == 1:
+            try:
+                output_shape[1] = MODEL_SEQUENCE_LENGTHS[model_name]  # Use the provided sequence length
+            except KeyError:
+                if verbose:
+                    print(f"Model name '{model_name}' not found in MODEL_SEQUENCE_LENGTHS. Using default sequence length of {DEFAULT_SEQUENCE_LENGTH}.")
+                output_shape[1] = DEFAULT_SEQUENCE_LENGTH  # Default sequence length
+        output_dtype = np.float32 if output_info.type == 'tensor(float)' else np.int32
+        output_buffer = np.empty(output_shape, dtype=output_dtype)
+        io_binding.bind_output(output_name, 'cpu', 0, output_buffer.dtype, output_buffer.shape, output_buffer.ctypes.data)
+    return io_binding
+
+def run_performance_test(session: ort.InferenceSession, io_binding: ort.IOBinding, iterations: int, memory_threshold: int, verbose: bool) -> tuple[float, float, list[float], int]:
+    """
+    Run the performance test for the given ONNX model session.
+
+    Args:
+        session (onnxruntime.InferenceSession): The ONNX model session.
+        io_binding (onnxruntime.IOBinding): The IOBinding object for input/output binding.
+        iterations (int): The number of iterations to run for performance measurement.
+        memory_threshold (int): The memory usage threshold in MB. If exceeded, the number of iterations will be reduced.
+        verbose (bool): Whether to print detailed output during iterations.
+
+    Returns:
+        tuple: A tuple containing the start time, end time, list of latencies, and actual number of iterations performed.
+    """
+    start_time = time.time()
+    latencies = []
+    for i in range(iterations):
+        iter_start_time = time.time()
+        session.run_with_iobinding(io_binding)
+        iter_end_time = time.time()
+        latencies.append(iter_end_time - iter_start_time)
+        current_memory_usage = psutil.Process().memory_info().rss / (1024 * 1024)
+        if verbose:
+            print(f"Iteration {i+1}/{iterations}, Current memory usage: {current_memory_usage:.2f} MB")
+        if current_memory_usage > memory_threshold:
+            if verbose:
+                print(f"Memory usage exceeded {memory_threshold} MB. Reducing the number of iterations.")
+            iterations = i + 1
+            break
+    end_time = time.time()
+    return start_time, end_time, latencies, iterations
+
+def calculate_metrics(start_time: float, end_time: float, latencies: list[float], iterations: int) -> tuple[float, float, int, float, float]:
+    """
+    Calculate performance metrics based on the test results.
+
+    Args:
+        start_time (float): The start time of the performance test.
+        end_time (float): The end time of the performance test.
+        latencies (list[float]): The list of latencies for each iteration.
+        iterations (int): The actual number of iterations performed.
+
+    Returns:
+        tuple: A tuple containing the average inference time, memory usage, actual number of iterations performed, average latency, and throughput.
+    """
+    duration = end_time - start_time
+    avg_time = duration / iterations
+    memory_usage = psutil.Process().memory_info().rss / (1024 * 1024)
+    avg_latency = sum(latencies) / len(latencies)
+    throughput = iterations / duration
+    return avg_time, memory_usage, iterations, avg_latency, throughput
+
 def measure_performance(model_path: str, iterations: int = 5, model_name: str = 'gpt2', use_dataset: bool = False, dataset_name: str = None, memory_threshold: int = 4000, verbose: bool = True) -> tuple[float, float, int, float, float]:
     """
     Measure the performance of the given ONNX model.
@@ -163,52 +265,11 @@ def measure_performance(model_path: str, iterations: int = 5, model_name: str = 
     try:
         session = ort.InferenceSession(model_path)
         input_data = generate_input_data(session, model_name, use_dataset, dataset_name)
-        io_binding = session.io_binding()
-        for name, data in input_data.items():
-            if verbose:
-                print(f"Binding input: {name}, dtype: {data.dtype}, shape: {data.shape}, buffer_ptr: {data.ctypes.data}")
-            io_binding.bind_input(name, 'cpu', 0, data.dtype, data.shape, data.ctypes.data)
+        io_binding = bind_inputs(session, input_data, verbose)
+        io_binding = bind_outputs(session, model_name, verbose)
 
-        # Bind outputs
-        for output_info in session.get_outputs():
-            output_name = output_info.name
-            output_shape = output_info.shape
-            # Replace dynamic dimensions (None or -1) with a default size of 1
-            output_shape = [dim if isinstance(dim, int) else 1 for dim in output_shape]
-            # Set a specific sequence length for outputs with dynamic dimensions
-            if len(output_shape) > 1 and output_shape[1] == 1:
-                try:
-                    output_shape[1] = MODEL_SEQUENCE_LENGTHS[model_name]  # Use the provided sequence length
-                except KeyError:
-                    if verbose:
-                        print(f"Model name '{model_name}' not found in MODEL_SEQUENCE_LENGTHS. Using default sequence length of {DEFAULT_SEQUENCE_LENGTH}.")
-                    output_shape[1] = DEFAULT_SEQUENCE_LENGTH  # Default sequence length
-            output_dtype = np.float32 if output_info.type == 'tensor(float)' else np.int32
-            output_buffer = np.empty(output_shape, dtype=output_dtype)
-            io_binding.bind_output(output_name, 'cpu', 0, output_buffer.dtype, output_buffer.shape, output_buffer.ctypes.data)
-
-        start_time = time.time()
-        latencies = []
-        for i in range(iterations):
-            iter_start_time = time.time()
-            session.run_with_iobinding(io_binding)
-            iter_end_time = time.time()
-            latencies.append(iter_end_time - iter_start_time)
-            current_memory_usage = psutil.Process().memory_info().rss / (1024 * 1024)
-            if verbose:
-                print(f"Iteration {i+1}/{iterations}, Current memory usage: {current_memory_usage:.2f} MB")
-            if current_memory_usage > memory_threshold:  # Use the memory_threshold parameter
-                if verbose:
-                    print(f"Memory usage exceeded {memory_threshold} MB. Reducing the number of iterations.")
-                iterations = i + 1
-                break
-        end_time = time.time()
-
-        duration = end_time - start_time
-        avg_time = duration / iterations  # Use the actual number of iterations performed
-        memory_usage = psutil.Process().memory_info().rss / (1024 * 1024)
-        avg_latency = sum(latencies) / len(latencies)
-        throughput = iterations / duration
+        start_time, end_time, latencies, iterations = run_performance_test(session, io_binding, iterations, memory_threshold, verbose)
+        avg_time, memory_usage, iterations, avg_latency, throughput = calculate_metrics(start_time, end_time, latencies, iterations)
 
         return avg_time, memory_usage, iterations, avg_latency, throughput  # Return the actual number of iterations performed
     except Exception as e:
