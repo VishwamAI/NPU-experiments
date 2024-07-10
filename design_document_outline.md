@@ -30,6 +30,19 @@
   - **Layer-Wise Scheduling for NPUs**
     - Key Findings: Maximizing resource utilization through layer-wise scheduling.
     - Application: Enhance NPU's resource utilization and efficiency.
+  - **Recent Advancements in NPUs**
+    - **Qualcomm's Hexagon NPUs**
+      - Key Findings: Designed for AI inference tasks on low-power, low-resource devices. Capable of handling generative AI tasks such as text generation, image synthesis, and audio processing.
+      - Application: Benchmark for low-power, efficient AI processing in our NPU design.
+    - **Apple's Neural Engine**
+      - Key Findings: Integrated into A-series and M-series chips, powering AI-driven features like Face ID, Siri, and AR. Accelerates tasks like facial recognition, NLP, and object tracking.
+      - Application: Inspiration for integrating AI-driven features and enhancing user experience in our NPU.
+    - **Samsung's NPU**
+      - Key Findings: Integrated into Exynos SoCs, capable of handling thousands of computations simultaneously. Enables low-power, high-speed generative AI computations.
+      - Application: Model for high-speed, efficient AI computations in our NPU.
+    - **Huawei’s Da Vinci Architecture**
+      - Key Findings: Core of Ascend AI processor, leveraging a high-performance 3D cube computing engine. Powerful for AI workloads.
+      - Application: Guide for high-performance AI processing in our NPU.
 
 ## Proposed NPU Model
 - High-level architecture
